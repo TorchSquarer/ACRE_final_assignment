@@ -13,7 +13,7 @@ class model():
 
         # Phase volumes [m3]
         V_aq  = 1e-2
-        V_org = 5e-3
+        V_org = 2*V_aq
         V_R   = V_aq + V_org
 
         # Feed concentration [mol/m3]
@@ -28,16 +28,45 @@ class model():
         k6 = 5e-3    # HMF(org) -> FDCA
 
         # Mass transfer
-        kLa_LL  = 2e-2  # (aq) -> (org)
-        P_HMF   = 3.0   # partition coefficient HMF: C_org/C_aq [-]
-        kLa_GL  = 5e-2  # (g)  -> (org)
-        C_O2sat = 8.0   # O2 saturation in organic [mol/m3]
+        db_LL = 1e-4        # Liquid bubble diameter
+        db_GL = 1e-3        # Gas bubble diamer
+        db_LS = 1e-3        # Solid particle diameter
+        k_aq2org = 2e-2     # MT constant (aq) -> (org)
+        a_aq2org = 1/db_LL  # 
+        m_aq2org = 1.0      # 
+        k_g2org  = 5e-2     # MT constant (g)  -> (org)
+        a_g2org  = 1/db_GL  # Hebben wij deze nodig?!?!?!?!?!?!?!?!?!?
+        m_g2org  = 1.0
+        k_org2p  = 1.0e-2
+        a_org2p  = 1/db_LS
+        C_O2sat  = 8.0      # O2 saturation in organic [mol/m3]
         
         ### Creating a Matrix
-        self.balanceMatrix = np.zeros((13,13))
-        self.balanceMatrix[0, 0:1] = [-k1*V_aq, k2*V_aq]                # Glucose (aq)
-        self.balanceMatrix[1, 0:1] = [k1*V_aq, -(k2*V_aq + k3*V_aq)]    # Fructose (aq)
-        self.balanceMatrix[2, 1:2] = [k2*V_aq]
+        R1 = k1*V_aq
+        R2 = k2*V_aq
+        R3 = k3*V_aq
+        R4 = k4*V_aq
+        R5 = k5*V_aq
+        R6 = k6*V_org
+        MT_aq2org = k_aq2org * a_aq2org
+        MT_g2org  = k_g2org * a_g2org # ??
+        MT_org2p  = k_org2p * a_org2p
+
+
+        self.comps = {0: "Glu(aq)", 1: "Fru(aq)", 2: "HMF(aq)", 3: "HMF(org)", 
+                      4: "HMF(p)", 5: "O2(g)", 6: "O2(org)", 7: "O2 (aq)", 8: "O2(p)", 
+                      9: "FDCA(p)", 10:"FDCA(org)", 11: "FDCA(aq)", 
+                      12:"Formic and Glaric Acids", 13: "Humins"}
+
+        NOfComps = len(self.comps)
+        self.balanceMatrix = np.zeros((NOfComps,NOfComps))
+        self.balanceMatrix[0, 0:2] = [-(F_aq + R1), R2]                                 # Glucose (aq)
+        self.balanceMatrix[1, 0:2] = [R1, -(R2 + R3)]                                   # Fructose (aq)
+        self.balanceMatrix[2, 1:4] = [R3, -(R4 + R5 + MT_aq2org), MT_aq2org*m_aq2org]   # HMF (aq)
+        self.balanceMatrix[3, 2:4] = [MT_aq2org, -(MT_aq2org*m_aq2org + MT_org2p)]      # HMF (org)
+        self.balanceMatrix[4, 3:5] = [MT_org2p, -R6]                                    # HMF (p)
+        self.balanceMatrix[5, 0] # O2(g)
+        self.balanceMatrix[6, ]
 
 
 
@@ -52,7 +81,7 @@ class model():
 
         print(self.balanceMatrix)
         print(self.ddt)
-"""
+        """
         self.balanceMatrix = np.matrix(
             [ -k1*V_aq, k2*V_aq, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0], # Glucose (aq)
             [ k1*V_aq, -(k2*V_aq + k3*V_aq), , , , , , , , , , , , ], # Fructose (aq)
@@ -68,7 +97,7 @@ class model():
             [ , , , , , , , , , , , , , ], # FDCA (aq)
             [ , , , , , , , , , , , , , ]  # FDCA (org)
             )
-"""        
+        """       
 
     def components():
         """
