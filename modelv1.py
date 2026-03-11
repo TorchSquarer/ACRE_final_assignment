@@ -1,5 +1,5 @@
 import numpy as np
-np.set_printoptions(precision=4, suppress=True)
+np.set_printoptions(formatter={'float': '{: 0.2e}'.format})
 
 class model():
     def __init__(self)-> None:
@@ -7,12 +7,12 @@ class model():
         # Parameters
         # --------------------------------------------------------
         # Flow rates [m3/s]
-        F_aq  = 1e-4
-        F_org = 5e-5
+        F_aq  = 2
+        F_org = 5
         F_R   = F_aq + F_org
 
         # Phase volumes [m3]
-        V_aq  = 1e-2
+        V_aq  = 0.1
         V_org = 2*V_aq
         V_R   = V_aq + V_org
 
@@ -30,12 +30,11 @@ class model():
         # Mass transfer
         db_LL = 1e-4        # Liquid bubble diameter
         db_LS = 1e-3        # Solid particle diameter
-        k_aq2org = 2e-2     # MT constant (aq) -> (org)
+        k_aq2org = 2e2     # MT constant (aq) -> (org)
         a_aq2org = 1/db_LL  # 
         m_aq2org = 1.0      # 
         m_org2p  = 1.0      # 
-        k_g2org  = 5e-2     # MT constant (g)  -> (org)
-        k_org2p  = 1.0e-2
+        k_org2p  = 1.0e2
         a_org2p  = 1/db_LS 
         C_O2sat  = 8.0      # O2 saturation in organic [mol/m3]
         
@@ -78,7 +77,7 @@ class model():
 
 
 
-        N_Of_Comps = len(self.comps) - 2
+        N_Of_Comps = len(self.comps)
         self.ReactantBalances = np.zeros((N_Of_Comps,N_Of_Comps))
         self.ReactantBalances[0, 0:2] = [-(F_aq + R1), R2]                    # Glucose (aq)
         self.ReactantBalances[1, 0:2] = [R1,         -(F_aq+ R2 + R3)]        # Fructose (aq)
@@ -89,8 +88,10 @@ class model():
         self.ReactantBalances[5, 4:6] = [R6_prime,    -MT_org2p]              # FDCA (p) (no m_org2p and TM one direction)
         self.ReactantBalances[6, 5:8] = [MT_org2p, -(F_org + MT_aq2org), MT_aq2org]      # FDCA (org) (no m_org2p or m_aq2org)
         self.ReactantBalances[7, 6:8] = [MT_aq2org, -(F_aq + MT_aq2org)]      # FDCA (aq) (no m_org2p)
-        #self.ReactantBalances[8, 3]   = R4                                    # Acids
-        #self.ReactantBalances[9, 3]   = R5                                    # Humins
+        self.ReactantBalances[8, 3]   = R4                                    # Acids
+        self.ReactantBalances[8, 8]   = F_org
+        self.ReactantBalances[9, 3]   = R5                                    # Humins
+        self.ReactantBalances[9, 9]   = F_org
         
         ### Matrix check
         self.print_state("Reactant balances initialized as:", self.ReactantBalances)
@@ -100,12 +101,12 @@ class model():
         self.print_state("Printing b:", self.ddt)
 
     def print_state(self, *args)->None:
-        msg_border = "***-----------------------------***"
+        msg_border = "***" + 64*"-" + "***"
         print(msg_border)
         for item in args:
             print(item)
 
-        print(msg_border)
+        #print(msg_border)
     
     def solve_balances(self)->None:
         self.conc_results = np.linalg.solve(self.ReactantBalances, self.ddt)
